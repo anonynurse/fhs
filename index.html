@@ -192,17 +192,41 @@
 
   // Weighted fetal variability:
   // 15% Absent, 30% Minimal, 35% Moderate, 20% Marked
+  // Amplitude is ± from baseline; peak–trough = 2 * amplitude.
   function pickVariability() {
     const r = Math.random();
 
     if (r < 0.15) {
-      return { name: "Absent", amplitude: 1, step: 0.3 };
-    } else if (r < 0.45) { // 0.15–0.45 → 30%
-      return { name: "Minimal (< 5 bpm)", amplitude: 4, step: 1.0 };
-    } else if (r < 0.80) { // 0.45–0.80 → 35%
-      return { name: "Moderate (6–25 bpm)", amplitude: 18, step: 1.8 };
-    } else {               // 0.80–1.00 → 20%
-      return { name: "Marked (> 25 bpm)", amplitude: 32, step: 3.2 };
+      // Absent: essentially flat, tiny noise
+      return {
+        name: "Absent",
+        amplitude: 0.5,        // P–T ≈ 1
+        step: 0.2
+      };
+    } else if (r < 0.45) {
+      // Minimal 1–5 bpm → amplitude ≈ 0.5–2.5
+      const amp = randomFloat(0.8, 2.5);
+      return {
+        name: "Minimal (1–5 bpm)",
+        amplitude: amp,
+        step: amp * 0.6
+      };
+    } else if (r < 0.80) {
+      // Moderate 6–25 bpm → amplitude ≈ 3–12.5
+      const amp = randomFloat(3, 12.5);
+      return {
+        name: "Moderate (6–25 bpm)",
+        amplitude: amp,
+        step: amp * 0.5
+      };
+    } else {
+      // Marked >25 bpm → amplitude > 12.5
+      const amp = randomFloat(13, 25);
+      return {
+        name: "Marked (> 25 bpm)",
+        amplitude: amp,
+        step: amp * 0.4
+      };
     }
   }
 
@@ -445,8 +469,7 @@
         if (tSec >= c.startSec && tSec <= c.endSec) {
           const phase = (tSec - c.startSec) / (c.endSec - c.startSec); // 0–1
           const clampedPhase = Math.max(0, Math.min(1, phase));
-          // true sine hump 0→1→0, symmetric
-          const factor = Math.sin(Math.PI * clampedPhase);
+          const factor = Math.sin(Math.PI * clampedPhase); // symmetric hump
           contractionAdd = Math.max(contractionAdd, c.amp * factor);
         }
       });
