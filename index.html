@@ -136,7 +136,6 @@
 
 <script>
 (function () {
-  // Correct answers stored here so the buttons can reveal them
   let correctBaseline = null;
   let correctVariability = "";
   let correctRange = "";
@@ -230,15 +229,22 @@
     ctx.stroke();
     ctx.restore();
 
-    // labels on central line
+    // BPM labels at minutes 1, 4, 7, slightly offset from the lines
+    const labelMinutes = [1, 4, 7];
+
     ctx.save();
     ctx.fillStyle = "rgba(239,68,68,1)";
     ctx.font = "10px Arial";
-    ctx.textAlign = "center";
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
+
     for (let bpm = bpmMin; bpm <= bpmMax; bpm += 30) {
       const y = height - (bpm - bpmMin) * pixelsPerBpm;
-      ctx.fillText(String(bpm), midX, y);
+      labelMinutes.forEach(minute => {
+        const lineX = minute * minuteWidth; // position of that minute line
+        const x = lineX + 4;                // offset a bit to the right
+        ctx.fillText(String(bpm), x, y);
+      });
     }
     ctx.restore();
   }
@@ -257,7 +263,7 @@
     const amplitude = variability.amplitude;
     const stepSize = variability.step;
 
-    // store correct answers for the quiz
+    // store correct answers for quiz
     correctBaseline = baseline;
     correctVariability = variability.name;
     correctRange =
@@ -320,7 +326,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // clear any previous "correct" labels
+    // hide previous reveal text
     document.getElementById("baselineCorrect").hidden = true;
     document.getElementById("variabilityCorrect").hidden = true;
     document.getElementById("rangeCorrect").hidden = true;
@@ -332,15 +338,15 @@
         const target = this.dataset.target;
         if (target === "baseline") {
           const el = document.getElementById("baselineCorrect");
-          el.textContent = "Correct: " + correctBaseline + " bpm";
+          el.textContent = correctBaseline + " bpm";
           el.hidden = false;
         } else if (target === "variability") {
           const el = document.getElementById("variabilityCorrect");
-          el.textContent = "Correct: " + correctVariability;
+          el.textContent = correctVariability;
           el.hidden = false;
         } else if (target === "range") {
           const el = document.getElementById("rangeCorrect");
-          el.textContent = "Correct: " + correctRange;
+          el.textContent = correctRange;
           el.hidden = false;
         }
       });
