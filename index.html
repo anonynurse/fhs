@@ -48,18 +48,13 @@
       flex-direction: column;
       gap: 12px;
     }
-    .side-panel h2 {
-      margin: 0 0 4px;
-      font-size: 1rem;
-      font-weight: 600;
-      color: #111827;
-    }
-    .side-panel p {
-      margin: 0 0 12px;
-      font-size: 0.85rem;
-      color: #6b7280;
+    .field-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
     }
     .field-group {
+      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -75,13 +70,22 @@
       background: #f9fafb;
       font-size: 0.85rem;
     }
-    .field-group input[readonly] {
-      color: #111827;
+    .correct-label {
+      font-size: 0.8rem;
+      color: #10b981;
     }
-    .meta {
-      margin-top: auto;
-      font-size: 0.75rem;
-      color: #9ca3af;
+    .check-btn {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .check-btn:hover {
+      background: #1d4ed8;
     }
     @media (max-width: 800px) {
       .layout {
@@ -99,32 +103,44 @@
   </div>
 
   <div class="side-panel">
-    <h2>Strip Details</h2>
-    <p>A new baseline and variability are randomly generated on each load.</p>
-
-    <div class="field-group">
-      <label for="baselineField">Baseline FHR</label>
-      <input id="baselineField" type="text" readonly>
+    <div class="field-row">
+      <div class="field-group">
+        <label for="baselineField">Baseline FHR (bpm)</label>
+        <input id="baselineField" type="text" autocomplete="off">
+        <div id="baselineCorrect" class="correct-label" hidden></div>
+      </div>
+      <button class="check-btn" data-target="baseline">Check</button>
     </div>
 
-    <div class="field-group">
-      <label for="variabilityField">Variability</label>
-      <input id="variabilityField" type="text" readonly>
+    <div class="field-row">
+      <div class="field-group">
+        <label for="variabilityField">Variability</label>
+        <input id="variabilityField" type="text" autocomplete="off"
+               placeholder="Absent / Mild / Moderate / Marked">
+        <div id="variabilityCorrect" class="correct-label" hidden></div>
+      </div>
+      <button class="check-btn" data-target="variability">Check</button>
     </div>
 
-    <div class="field-group">
-      <label for="rangeField">Approx. Range Shown</label>
-      <input id="rangeField" type="text" readonly>
-    </div>
-
-    <div class="meta">
-      Refresh the page to generate a new strip.
+    <div class="field-row">
+      <div class="field-group">
+        <label for="rangeField">Approx. Range (bpm)</label>
+        <input id="rangeField" type="text" autocomplete="off"
+               placeholder="e.g. 130 – 150 bpm">
+        <div id="rangeCorrect" class="correct-label" hidden></div>
+      </div>
+      <button class="check-btn" data-target="range">Check</button>
     </div>
   </div>
 </div>
 
 <script>
 (function () {
+  // Correct answers stored here so the buttons can reveal them
+  let correctBaseline = null;
+  let correctVariability = "";
+  let correctRange = "";
+
   function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
@@ -147,8 +163,7 @@
     const smallBoxWidth = width / totalSmallBoxes;
     const minuteWidth = smallBoxWidth * smallBoxesPerMinute;
 
-    // ---- vertical lines (time) ----
-    // minor 10s
+    // vertical minor (10 s)
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.25)";
     ctx.lineWidth = 0.5;
@@ -161,7 +176,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // major minutes
+    // vertical major (1 min)
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.75)";
     ctx.lineWidth = 1;
@@ -174,7 +189,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // center vertical (acts like y-axis)
+    // centre vertical (y-axis style)
     const midX = width / 2 + 0.5;
     ctx.save();
     ctx.strokeStyle = "rgba(239,68,68,0.95)";
@@ -185,11 +200,11 @@
     ctx.stroke();
     ctx.restore();
 
-    // ---- horizontal lines (BPM) ----
+    // horizontal lines
     const bpmSpan = bpmMax - bpmMin;
     const pixelsPerBpm = height / bpmSpan;
 
-    // minor 10 bpm
+    // minor (10 bpm)
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.25)";
     ctx.lineWidth = 0.5;
@@ -202,7 +217,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // major 30 bpm
+    // major (30 bpm)
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.75)";
     ctx.lineWidth = 1;
@@ -215,13 +230,12 @@
     ctx.stroke();
     ctx.restore();
 
-    // ---- BPM labels along the centre ----
+    // labels on central line
     ctx.save();
     ctx.fillStyle = "rgba(239,68,68,1)";
     ctx.font = "10px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
     for (let bpm = bpmMin; bpm <= bpmMax; bpm += 30) {
       const y = height - (bpm - bpmMin) * pixelsPerBpm;
       ctx.fillText(String(bpm), midX, y);
@@ -243,10 +257,10 @@
     const amplitude = variability.amplitude;
     const stepSize = variability.step;
 
-    // side panel
-    document.getElementById("baselineField").value = baseline + " bpm";
-    document.getElementById("variabilityField").value = variability.name;
-    document.getElementById("rangeField").value =
+    // store correct answers for the quiz
+    correctBaseline = baseline;
+    correctVariability = variability.name;
+    correctRange =
       (baseline - amplitude).toFixed(0) + " – " +
       (baseline + amplitude).toFixed(0) + " bpm";
 
@@ -259,7 +273,7 @@
       return height - (clamped - bpmMinGrid) * pixelsPerBpm;
     }
 
-    // baseline dashed line
+    // baseline dashed
     ctx.save();
     ctx.strokeStyle = "rgba(37,99,235,0.7)";
     ctx.lineWidth = 1;
@@ -276,7 +290,7 @@
     const secondsPerSmallBox = 10;
     const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
     const totalSmallBoxes = totalMinutes * smallBoxesPerMinute; // 60
-    const pointsPerSmallBox = 10; // makes 600 points total
+    const pointsPerSmallBox = 10;
     const totalPoints = totalSmallBoxes * pointsPerSmallBox;
     const xStep = width / (totalPoints - 1);
 
@@ -305,9 +319,38 @@
 
     ctx.stroke();
     ctx.restore();
+
+    // clear any previous "correct" labels
+    document.getElementById("baselineCorrect").hidden = true;
+    document.getElementById("variabilityCorrect").hidden = true;
+    document.getElementById("rangeCorrect").hidden = true;
   }
 
-  window.addEventListener("DOMContentLoaded", generateFHRStrip);
+  function setupCheckButtons() {
+    document.querySelectorAll(".check-btn").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const target = this.dataset.target;
+        if (target === "baseline") {
+          const el = document.getElementById("baselineCorrect");
+          el.textContent = "Correct: " + correctBaseline + " bpm";
+          el.hidden = false;
+        } else if (target === "variability") {
+          const el = document.getElementById("variabilityCorrect");
+          el.textContent = "Correct: " + correctVariability;
+          el.hidden = false;
+        } else if (target === "range") {
+          const el = document.getElementById("rangeCorrect");
+          el.textContent = "Correct: " + correctRange;
+          el.hidden = false;
+        }
+      });
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", function () {
+    generateFHRStrip();
+    setupCheckButtons();
+  });
 })();
 </script>
 </body>
