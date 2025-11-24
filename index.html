@@ -153,7 +153,7 @@
       <div class="field-group">
         <label for="variabilityField">Variability</label>
         <input id="variabilityField" type="text" autocomplete="off"
-               placeholder="Absent / Mild / Moderate / Marked">
+               placeholder="Absent / Minimal / Moderate / Marked">
         <div id="variabilityCorrect" class="correct-label" hidden></div>
       </div>
       <button class="btn check-btn" data-target="variability">Check</button>
@@ -190,14 +190,20 @@
     return Math.random() * (max - min) + min;
   }
 
+  // Weighted fetal variability:
+  // 15% Absent, 30% Minimal, 35% Moderate, 20% Marked
   function pickVariability() {
-    const options = [
-      { name: "Absent", amplitude: 1, step: 0.5 },
-      { name: "Mild (< 5 bpm)", amplitude: 4, step: 1.0 },
-      { name: "Moderate (6–25 bpm)", amplitude: 18, step: 1.8 },
-      { name: "Marked (> 25 bpm)", amplitude: 32, step: 3.2 }
-    ];
-    return options[Math.floor(Math.random() * options.length)];
+    const r = Math.random();
+
+    if (r < 0.15) {
+      return { name: "Absent", amplitude: 1, step: 0.3 };
+    } else if (r < 0.45) { // 0.15–0.45 → 30%
+      return { name: "Minimal (< 5 bpm)", amplitude: 4, step: 1.0 };
+    } else if (r < 0.80) { // 0.45–0.80 → 35%
+      return { name: "Moderate (6–25 bpm)", amplitude: 18, step: 1.8 };
+    } else {               // 0.80–1.00 → 20%
+      return { name: "Marked (> 25 bpm)", amplitude: 32, step: 3.2 };
+    }
   }
 
   // Generic grid drawer (FHR & TOCO)
@@ -382,20 +388,18 @@
     }
 
     // --- Contractions: hard cap of 2, clearly spaced ---
-
     const contractions = [];
     const contractionCount = randomInt(0, 2); // 0, 1, or 2
     const totalSeconds = totalMinutes * 60;
 
     if (contractionCount === 1) {
-      const centerMin = randomFloat(3, 7);       // somewhere in the middle
+      const centerMin = randomFloat(3, 7);
       const durationSec = randomInt(60, 120);
       const amp = randomInt(35, 70);
       const startSec = centerMin * 60 - durationSec / 2;
       const endSec = centerMin * 60 + durationSec / 2;
       contractions.push({ startSec, endSec, amp });
     } else if (contractionCount === 2) {
-      // one earlier, one later – no overlap
       const centerMin1 = randomFloat(2, 4);
       const centerMin2 = randomFloat(6, 8);
       const durationSec1 = randomInt(60, 120);
@@ -414,7 +418,6 @@
         amp: amp2
       });
     }
-    // if contractionCount === 0, contractions[] stays empty
 
     const pointsPerSmallBox = 10;
     const totalPoints = totalSmallBoxes * pointsPerSmallBox;
@@ -432,8 +435,8 @@
     for (let i = 0; i < totalPoints; i++) {
       const tSec = (i / (totalPoints - 1)) * totalSeconds;
 
-      // baseline moderate variability: squiggly random walk
-      baselineVal += (Math.random() - 0.5) * 2.0;  // bigger step
+      // squiggly random walk baseline
+      baselineVal += (Math.random() - 0.5) * 2.0;
       if (baselineVal < 8) baselineVal = 8;
       if (baselineVal > 22) baselineVal = 22;
 
@@ -441,9 +444,8 @@
       let contractionAdd = 0;
       contractions.forEach(c => {
         if (tSec >= c.startSec && tSec <= c.endSec) {
-          const phase = (tSec - c.startSec) / (c.endSec - c.startSec); // 0–1
+          const phase = (tSec - c.startSec) / (c.endSec - c.startSec);
           const clampedPhase = Math.max(0, Math.min(1, phase));
-          // smooth cosine dome: 0→1→0 with gradual slopes
           const factor = (1 - Math.cos(Math.PI * clampedPhase)) / 2;
           contractionAdd = Math.max(contractionAdd, c.amp * factor);
         }
@@ -451,7 +453,7 @@
 
       let value = baselineVal + contractionAdd;
 
-      // mild smoothing of total trace (keep it squiggly but not jagged)
+      // mild smoothing
       if (i > 0) {
         value = prevTotal * 0.5 + value * 0.5;
       }
