@@ -354,7 +354,10 @@
     const bpmMinGrid = 30;
     const bpmMaxGrid = 240;
 
-    const baseline = randomInt(110, 160);
+    // Generate random baseline and round to nearest 5 bpm
+    const rawBaseline = randomInt(110, 160);
+    const baseline = Math.round(rawBaseline / 5) * 5;
+
     const variability = pickVariability();
     const amplitude = variability.amplitude;
     const stepSize = variability.step;
