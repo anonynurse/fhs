@@ -72,7 +72,7 @@
 
     .field-row {
       display: flex;
-      align-items: center;
+      align-items: flex-end;   /* align bottoms so button lines up with input */
       gap: 8px;
     }
 
@@ -190,21 +190,19 @@
     return Math.random() * (max - min) + min;
   }
 
-  // Weighted fetal variability:
-  // 15% Absent, 30% Minimal, 35% Moderate, 20% Marked
-  // Amplitude is ± from baseline; peak–trough = 2 * amplitude.
+  // Weighted fetal variability, amplitude is ± from baseline (peak–trough = 2*amplitude)
   function pickVariability() {
     const r = Math.random();
 
     if (r < 0.15) {
-      // Absent: essentially flat, tiny noise
+      // Absent
       return {
         name: "Absent",
         amplitude: 0.5,        // P–T ≈ 1
         step: 0.2
       };
     } else if (r < 0.45) {
-      // Minimal 1–5 bpm → amplitude ≈ 0.5–2.5
+      // Minimal 1–5 bpm
       const amp = randomFloat(0.8, 2.5);
       return {
         name: "Minimal (1–5 bpm)",
@@ -212,7 +210,7 @@
         step: amp * 0.6
       };
     } else if (r < 0.80) {
-      // Moderate 6–25 bpm → amplitude ≈ 3–12.5
+      // Moderate 6–25 bpm
       const amp = randomFloat(3, 12.5);
       return {
         name: "Moderate (6–25 bpm)",
@@ -220,7 +218,7 @@
         step: amp * 0.5
       };
     } else {
-      // Marked >25 bpm → amplitude > 12.5
+      // Marked >25 bpm
       const amp = randomFloat(13, 25);
       return {
         name: "Marked (> 25 bpm)",
@@ -309,6 +307,41 @@
         ctx.fillText(String(v), x, y);
       });
     }
+    ctx.restore();
+  }
+
+  // Draw baseline overlay when user checks the baseline answer
+  function drawBaselineOverlay() {
+    if (correctBaseline == null) return;
+
+    const canvas = document.getElementById("fhrCanvas");
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const bpmMinGrid = 30;
+    const bpmMaxGrid = 240;
+    const pixelsPerBpm = height / (bpmMaxGrid - bpmMinGrid);
+
+    const clamped = Math.max(bpmMinGrid, Math.min(bpmMaxGrid, correctBaseline));
+    const baselineY = height - (clamped - bpmMinGrid) * pixelsPerBpm;
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(37,99,235,0.9)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, baselineY + 0.5);
+    ctx.lineTo(width, baselineY + 0.5);
+    ctx.stroke();
+
+    // Label near left side
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(37,99,235,0.95)";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(correctBaseline + " bpm", 4, baselineY - 2);
     ctx.restore();
   }
 
@@ -507,6 +540,7 @@
           const el = document.getElementById("baselineCorrect");
           el.textContent = correctBaseline + " bpm";
           el.hidden = false;
+          drawBaselineOverlay();   // draw blue dashed baseline + label
         } else if (target === "variability") {
           const el = document.getElementById("variabilityCorrect");
           el.textContent = correctVariability;
