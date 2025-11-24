@@ -354,8 +354,22 @@
     const bpmMinGrid = 30;
     const bpmMaxGrid = 240;
 
-    // Generate random baseline and round to nearest 5 bpm
-    const rawBaseline = randomInt(110, 160);
+    // Baseline: 90–180 overall, but 80% chance within 110–160.
+    let rawBaseline;
+    if (Math.random() < 0.8) {
+      // Normal range most of the time
+      rawBaseline = randomInt(110, 160);
+    } else {
+      // 20% of the time: brady or tachy
+      if (Math.random() < 0.5) {
+        // Brady side: 90–109
+        rawBaseline = randomInt(90, 109);
+      } else {
+        // Tachy side: 161–180
+        rawBaseline = randomInt(161, 180);
+      }
+    }
+    // Round to nearest 5 bpm
     const baseline = Math.round(rawBaseline / 5) * 5;
 
     const variability = pickVariability();
