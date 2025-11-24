@@ -37,7 +37,13 @@
       border-radius: 6px;
       border: 1px solid #e5e7eb;
       background: #fff;
+      display: block;
     }
+    /* space between FHR and TOCO canvases */
+    #tocoCanvas {
+      margin-top: 12px;
+    }
+
     .side-panel {
       flex: 1;
       background: #ffffff;
@@ -48,6 +54,23 @@
       flex-direction: column;
       gap: 12px;
     }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .toco-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #4b5563;
+    }
+
     .field-row {
       display: flex;
       align-items: flex-start;
@@ -74,8 +97,8 @@
       font-size: 0.8rem;
       color: #10b981;
     }
-    .check-btn {
-      padding: 6px 10px;
+    .btn {
+      padding: 6px 12px;
       border-radius: 6px;
       border: none;
       background: #2563eb;
@@ -84,9 +107,13 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    .check-btn:hover {
+    .btn:hover {
       background: #1d4ed8;
     }
+    .check-btn {
+      padding: 6px 10px;
+    }
+
     @media (max-width: 800px) {
       .layout {
         flex-direction: column;
@@ -100,16 +127,26 @@
   <div class="strip-card">
     <div class="strip-title">Fetal Heart Rate Strip (simulated)</div>
     <canvas id="fhrCanvas" width="900" height="350"></canvas>
+    <canvas id="tocoCanvas" width="900" height="150" style="display:none;"></canvas>
   </div>
 
   <div class="side-panel">
+    <div class="top-controls">
+      <button id="newStripBtn" class="btn">New</button>
+      <label class="toco-toggle">
+        <input type="checkbox" id="tocoCheckbox">
+        TOCO
+      </label>
+    </div>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:4px 0 8px;">
+
     <div class="field-row">
       <div class="field-group">
         <label for="baselineField">Baseline FHR (bpm)</label>
         <input id="baselineField" type="text" autocomplete="off">
         <div id="baselineCorrect" class="correct-label" hidden></div>
       </div>
-      <button class="check-btn" data-target="baseline">Check</button>
+      <button class="btn check-btn" data-target="baseline">Check</button>
     </div>
 
     <div class="field-row">
@@ -119,7 +156,7 @@
                placeholder="Absent / Mild / Moderate / Marked">
         <div id="variabilityCorrect" class="correct-label" hidden></div>
       </div>
-      <button class="check-btn" data-target="variability">Check</button>
+      <button class="btn check-btn" data-target="variability">Check</button>
     </div>
 
     <div class="field-row">
@@ -129,13 +166,19 @@
                placeholder="e.g. 130 – 150 bpm">
         <div id="rangeCorrect" class="correct-label" hidden></div>
       </div>
-      <button class="check-btn" data-target="range">Check</button>
+      <button class="btn check-btn" data-target="range">Check</button>
     </div>
   </div>
 </div>
 
 <script>
 (function () {
+  // Time scale constants shared by both strips
+  const totalMinutes = 10;
+  const secondsPerSmallBox = 10;
+  const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
+  const totalSmallBoxes = totalMinutes * smallBoxesPerMinute; // 60
+
   let correctBaseline = null;
   let correctVariability = "";
   let correctRange = "";
@@ -154,11 +197,10 @@
     return options[Math.floor(Math.random() * options.length)];
   }
 
-  function drawGrid(ctx, width, height, bpmMin, bpmMax) {
-    const totalMinutes = 10;
-    const secondsPerSmallBox = 10;
-    const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
-    const totalSmallBoxes = totalMinutes * smallBoxesPerMinute; // 60
+  // Generic grid drawer used for both FHR and TOCO
+  function drawGrid(ctx, width, height, valueMin, valueMax,
+                    minorStep, majorStep, labelStep) {
+
     const smallBoxWidth = width / totalSmallBoxes;
     const minuteWidth = smallBoxWidth * smallBoxesPerMinute;
 
@@ -188,48 +230,37 @@
     ctx.stroke();
     ctx.restore();
 
-    // centre vertical (y-axis style)
-    const midX = width / 2 + 0.5;
-    ctx.save();
-    ctx.strokeStyle = "rgba(239,68,68,0.95)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(midX, 0);
-    ctx.lineTo(midX, height);
-    ctx.stroke();
-    ctx.restore();
-
     // horizontal lines
-    const bpmSpan = bpmMax - bpmMin;
-    const pixelsPerBpm = height / bpmSpan;
+    const valueSpan = valueMax - valueMin;
+    const pixelsPerValue = height / valueSpan;
 
-    // minor (10 bpm)
+    // minor lines
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.25)";
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    for (let bpm = bpmMin; bpm <= bpmMax; bpm += 10) {
-      const y = height - (bpm - bpmMin) * pixelsPerBpm + 0.5;
+    for (let v = valueMin; v <= valueMax; v += minorStep) {
+      const y = height - (v - valueMin) * pixelsPerValue + 0.5;
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
     }
     ctx.stroke();
     ctx.restore();
 
-    // major (30 bpm)
+    // major lines
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.75)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let bpm = bpmMin; bpm <= bpmMax; bpm += 30) {
-      const y = height - (bpm - bpmMin) * pixelsPerBpm + 0.5;
+    for (let v = valueMin; v <= valueMax; v += majorStep) {
+      const y = height - (v - valueMin) * pixelsPerValue + 0.5;
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
     }
     ctx.stroke();
     ctx.restore();
 
-    // BPM labels at minutes 1, 4, 7, slightly offset from the lines
+    // BPM/pressure labels at minutes 1, 4, 7, slightly offset
     const labelMinutes = [1, 4, 7];
 
     ctx.save();
@@ -238,12 +269,12 @@
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
-    for (let bpm = bpmMin; bpm <= bpmMax; bpm += 30) {
-      const y = height - (bpm - bpmMin) * pixelsPerBpm;
+    for (let v = valueMin; v <= valueMax; v += labelStep) {
+      const y = height - (v - valueMin) * pixelsPerValue;
       labelMinutes.forEach(minute => {
-        const lineX = minute * minuteWidth; // position of that minute line
-        const x = lineX + 4;                // offset a bit to the right
-        ctx.fillText(String(bpm), x, y);
+        const lineX = minute * minuteWidth;
+        const x = lineX + 4;
+        ctx.fillText(String(v), x, y);
       });
     }
     ctx.restore();
@@ -263,15 +294,17 @@
     const amplitude = variability.amplitude;
     const stepSize = variability.step;
 
-    // store correct answers for quiz
+    // store correct answers
     correctBaseline = baseline;
     correctVariability = variability.name;
     correctRange =
       (baseline - amplitude).toFixed(0) + " – " +
       (baseline + amplitude).toFixed(0) + " bpm";
 
+    // clear & grid
     ctx.clearRect(0, 0, width, height);
-    drawGrid(ctx, width, height, bpmMinGrid, bpmMaxGrid);
+    drawGrid(ctx, width, height, bpmMinGrid, bpmMaxGrid,
+             10, 30, 30);
 
     const pixelsPerBpm = height / (bpmMaxGrid - bpmMinGrid);
     function bpmToY(bpm) {
@@ -279,23 +312,7 @@
       return height - (clamped - bpmMinGrid) * pixelsPerBpm;
     }
 
-    // baseline dashed
-    ctx.save();
-    ctx.strokeStyle = "rgba(37,99,235,0.7)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    const baselineY = bpmToY(baseline);
-    ctx.moveTo(0, baselineY + 0.5);
-    ctx.lineTo(width, baselineY + 0.5);
-    ctx.stroke();
-    ctx.restore();
-
     // FHR random walk
-    const totalMinutes = 10;
-    const secondsPerSmallBox = 10;
-    const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
-    const totalSmallBoxes = totalMinutes * smallBoxesPerMinute; // 60
     const pointsPerSmallBox = 10;
     const totalPoints = totalSmallBoxes * pointsPerSmallBox;
     const xStep = width / (totalPoints - 1);
@@ -326,10 +343,108 @@
     ctx.stroke();
     ctx.restore();
 
-    // hide previous reveal text
+    // reset quiz inputs and reveals
+    document.getElementById("baselineField").value = "";
+    document.getElementById("variabilityField").value = "";
+    document.getElementById("rangeField").value = "";
     document.getElementById("baselineCorrect").hidden = true;
     document.getElementById("variabilityCorrect").hidden = true;
     document.getElementById("rangeCorrect").hidden = true;
+
+    // handle TOCO state
+    const tocoCheckbox = document.getElementById("tocoCheckbox");
+    if (tocoCheckbox && tocoCheckbox.checked) {
+      generateTocoStrip();
+    } else {
+      hideTocoStrip();
+    }
+  }
+
+  function generateTocoStrip() {
+    const canvas = document.getElementById("tocoCanvas");
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+
+    canvas.style.display = "block";
+
+    const minVal = 0;
+    const maxVal = 100;
+
+    ctx.clearRect(0, 0, width, height);
+    drawGrid(ctx, width, height, minVal, maxVal,
+             10, 20, 20);
+
+    const valueSpan = maxVal - minVal;
+    const pixelsPerVal = height / valueSpan;
+
+    function valToY(v) {
+      const clamped = Math.max(minVal, Math.min(maxVal, v));
+      return height - (clamped - minVal) * pixelsPerVal;
+    }
+
+    // Contractions: 2–3 bumps spread across the 10 minutes
+    const contractions = [];
+    const contractionCount = randomInt(2, 3);
+    const totalSeconds = totalMinutes * 60;
+    const gap = totalMinutes / (contractionCount + 1);
+
+    for (let i = 0; i < contractionCount; i++) {
+      const centerMin = (i + 1) * gap + (Math.random() - 0.5) * 0.5;
+      const durationSec = randomInt(45, 90);
+      const amp = randomInt(40, 80); // peak above baseline
+      const startSec = centerMin * 60 - durationSec * 0.4;
+      const endSec = startSec + durationSec;
+      contractions.push({ startSec, endSec, amp });
+    }
+
+    const pointsPerSmallBox = 10;
+    const totalPoints = totalSmallBoxes * pointsPerSmallBox;
+    const xStep = width / (totalPoints - 1);
+
+    ctx.save();
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+
+    for (let i = 0; i < totalPoints; i++) {
+      const tSec = (i / (totalPoints - 1)) * totalSeconds;
+      let value = 5 + (Math.random() * 3 - 1.5); // low baseline with noise
+
+      contractions.forEach(c => {
+        if (tSec >= c.startSec && tSec <= c.endSec) {
+          const phase = (tSec - c.startSec) / (c.endSec - c.startSec);
+          const peakPhase = 0.4;
+          let factor;
+          if (phase <= peakPhase) {
+            factor = phase / peakPhase;
+          } else {
+            factor = (1 - phase) / (1 - peakPhase);
+          }
+          if (factor < 0) factor = 0;
+          value += c.amp * factor;
+        }
+      });
+
+      if (value < minVal) value = minVal;
+      if (value > maxVal) value = maxVal;
+
+      const x = i * xStep;
+      const y = valToY(value);
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function hideTocoStrip() {
+    const canvas = document.getElementById("tocoCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.style.display = "none";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
   function setupCheckButtons() {
@@ -353,9 +468,24 @@
     });
   }
 
+  function setupTopControls() {
+    document.getElementById("newStripBtn")
+      .addEventListener("click", generateFHRStrip);
+
+    document.getElementById("tocoCheckbox")
+      .addEventListener("change", function () {
+        if (this.checked) {
+          generateTocoStrip();
+        } else {
+          hideTocoStrip();
+        }
+      });
+  }
+
   window.addEventListener("DOMContentLoaded", function () {
     generateFHRStrip();
     setupCheckButtons();
+    setupTopControls();
   });
 })();
 </script>
