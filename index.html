@@ -39,7 +39,6 @@
       background: #fff;
       display: block;
     }
-    /* space between FHR and TOCO canvases */
     #tocoCanvas {
       margin-top: 12px;
     }
@@ -73,9 +72,10 @@
 
     .field-row {
       display: flex;
-      align-items: flex-start;
+      align-items: center;       /* <- was flex-start; now centered */
       gap: 8px;
     }
+
     .field-group {
       flex: 1;
       display: flex;
@@ -173,7 +173,6 @@
 
 <script>
 (function () {
-  // Time scale constants shared by both strips
   const totalMinutes = 10;
   const secondsPerSmallBox = 10;
   const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
@@ -197,7 +196,7 @@
     return options[Math.floor(Math.random() * options.length)];
   }
 
-  // Generic grid drawer used for both FHR and TOCO
+  // Generic grid drawer (used for FHR and TOCO)
   function drawGrid(ctx, width, height, valueMin, valueMax,
                     minorStep, majorStep, labelStep) {
 
@@ -230,11 +229,10 @@
     ctx.stroke();
     ctx.restore();
 
-    // horizontal lines
     const valueSpan = valueMax - valueMin;
     const pixelsPerValue = height / valueSpan;
 
-    // minor lines
+    // horizontal minor
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.25)";
     ctx.lineWidth = 0.5;
@@ -247,7 +245,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // major lines
+    // horizontal major
     ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.75)";
     ctx.lineWidth = 1;
@@ -260,7 +258,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // BPM/pressure labels at minutes 1, 4, 7, slightly offset
+    // labels at minutes 1,4,7 slightly offset
     const labelMinutes = [1, 4, 7];
 
     ctx.save();
@@ -294,14 +292,12 @@
     const amplitude = variability.amplitude;
     const stepSize = variability.step;
 
-    // store correct answers
     correctBaseline = baseline;
     correctVariability = variability.name;
     correctRange =
       (baseline - amplitude).toFixed(0) + " – " +
       (baseline + amplitude).toFixed(0) + " bpm";
 
-    // clear & grid
     ctx.clearRect(0, 0, width, height);
     drawGrid(ctx, width, height, bpmMinGrid, bpmMaxGrid,
              10, 30, 30);
@@ -343,7 +339,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // reset quiz inputs and reveals
+    // reset quiz fields
     document.getElementById("baselineField").value = "";
     document.getElementById("variabilityField").value = "";
     document.getElementById("rangeField").value = "";
@@ -351,7 +347,6 @@
     document.getElementById("variabilityCorrect").hidden = true;
     document.getElementById("rangeCorrect").hidden = true;
 
-    // handle TOCO state
     const tocoCheckbox = document.getElementById("tocoCheckbox");
     if (tocoCheckbox && tocoCheckbox.checked) {
       generateTocoStrip();
@@ -383,7 +378,7 @@
       return height - (clamped - minVal) * pixelsPerVal;
     }
 
-    // Contractions: 2–3 bumps spread across the 10 minutes
+    // 2–3 contractions across the 10 minutes
     const contractions = [];
     const contractionCount = randomInt(2, 3);
     const totalSeconds = totalMinutes * 60;
@@ -392,8 +387,8 @@
     for (let i = 0; i < contractionCount; i++) {
       const centerMin = (i + 1) * gap + (Math.random() - 0.5) * 0.5;
       const durationSec = randomInt(45, 90);
-      const amp = randomInt(40, 80); // peak above baseline
-      const startSec = centerMin * 60 - durationSec * 0.4;
+      const amp = randomInt(40, 80);
+      const startSec = centerMin * 60 - durationSec * 0.5;
       const endSec = startSec + durationSec;
       contractions.push({ startSec, endSec, amp });
     }
@@ -409,19 +404,14 @@
 
     for (let i = 0; i < totalPoints; i++) {
       const tSec = (i / (totalPoints - 1)) * totalSeconds;
-      let value = 5 + (Math.random() * 3 - 1.5); // low baseline with noise
+      let value = 5 + (Math.random() * 3 - 1.5); // low noisy baseline
 
       contractions.forEach(c => {
         if (tSec >= c.startSec && tSec <= c.endSec) {
-          const phase = (tSec - c.startSec) / (c.endSec - c.startSec);
-          const peakPhase = 0.4;
-          let factor;
-          if (phase <= peakPhase) {
-            factor = phase / peakPhase;
-          } else {
-            factor = (1 - phase) / (1 - peakPhase);
-          }
-          if (factor < 0) factor = 0;
+          const phase = (tSec - c.startSec) / (c.endSec - c.startSec); // 0–1
+          const clampedPhase = Math.max(0, Math.min(1, phase));
+          // smooth rounded hump, not pointed
+          const factor = Math.sin(clampedPhase * Math.PI);
           value += c.amp * factor;
         }
       });
