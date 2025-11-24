@@ -423,9 +423,8 @@
     const totalPoints = totalSmallBoxes * pointsPerSmallBox;
     const xStep = width / (totalPoints - 1);
 
-    // baseline starts around 12 with moderate, squiggly variability
+    // baseline starts around 12 with more squiggly variability
     let baselineVal = randomFloat(10, 15);
-    let prevTotal = baselineVal;
 
     ctx.save();
     ctx.strokeStyle = "#111827";
@@ -436,28 +435,25 @@
       const tSec = (i / (totalPoints - 1)) * totalSeconds;
 
       // squiggly random walk baseline
-      baselineVal += (Math.random() - 0.5) * 2.0;
+      baselineVal += (Math.random() - 0.5) * 3.0; // bigger steps
       if (baselineVal < 8) baselineVal = 8;
-      if (baselineVal > 22) baselineVal = 22;
+      if (baselineVal > 25) baselineVal = 25;
 
-      // contraction dome contribution
+      // contraction dome contribution (pure sine hump)
       let contractionAdd = 0;
       contractions.forEach(c => {
         if (tSec >= c.startSec && tSec <= c.endSec) {
-          const phase = (tSec - c.startSec) / (c.endSec - c.startSec);
+          const phase = (tSec - c.startSec) / (c.endSec - c.startSec); // 0–1
           const clampedPhase = Math.max(0, Math.min(1, phase));
-          const factor = (1 - Math.cos(Math.PI * clampedPhase)) / 2;
+          // true sine hump 0→1→0, symmetric
+          const factor = Math.sin(Math.PI * clampedPhase);
           contractionAdd = Math.max(contractionAdd, c.amp * factor);
         }
       });
 
+      // total value = baseline + contraction + high-frequency noise
       let value = baselineVal + contractionAdd;
-
-      // mild smoothing
-      if (i > 0) {
-        value = prevTotal * 0.5 + value * 0.5;
-      }
-      prevTotal = value;
+      value += (Math.random() - 0.5) * 2.0; // extra squiggly noise
 
       if (value < minVal) value = minVal;
       if (value > maxVal) value = maxVal;
