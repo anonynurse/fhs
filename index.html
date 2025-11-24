@@ -72,7 +72,7 @@
 
     .field-row {
       display: flex;
-      align-items: center;       /* <- was flex-start; now centered */
+      align-items: center;
       gap: 8px;
     }
 
@@ -196,7 +196,7 @@
     return options[Math.floor(Math.random() * options.length)];
   }
 
-  // Generic grid drawer (used for FHR and TOCO)
+  // Generic grid drawer (FHR & TOCO)
   function drawGrid(ctx, width, height, valueMin, valueMax,
                     minorStep, majorStep, labelStep) {
 
@@ -378,16 +378,16 @@
       return height - (clamped - minVal) * pixelsPerVal;
     }
 
-    // 2–3 contractions across the 10 minutes
+    // Up to 2 contractions
     const contractions = [];
-    const contractionCount = randomInt(2, 3);
+    const contractionCount = randomInt(0, 2);
     const totalSeconds = totalMinutes * 60;
-    const gap = totalMinutes / (contractionCount + 1);
+    const gap = totalMinutes / (Math.max(contractionCount, 1) + 1);
 
     for (let i = 0; i < contractionCount; i++) {
       const centerMin = (i + 1) * gap + (Math.random() - 0.5) * 0.5;
-      const durationSec = randomInt(45, 90);
-      const amp = randomInt(40, 80);
+      const durationSec = randomInt(60, 120);      // more gradual
+      const amp = randomInt(35, 70);               // peak above baseline
       const startSec = centerMin * 60 - durationSec * 0.5;
       const endSec = startSec + durationSec;
       contractions.push({ startSec, endSec, amp });
@@ -397,6 +397,9 @@
     const totalPoints = totalSmallBoxes * pointsPerSmallBox;
     const xStep = width / (totalPoints - 1);
 
+    let baselineVal = 10;  // starting resting tone
+    let prevTotal = baselineVal;
+
     ctx.save();
     ctx.strokeStyle = "#111827";
     ctx.lineWidth = 1.5;
@@ -404,17 +407,31 @@
 
     for (let i = 0; i < totalPoints; i++) {
       const tSec = (i / (totalPoints - 1)) * totalSeconds;
-      let value = 5 + (Math.random() * 3 - 1.5); // low noisy baseline
 
+      // baseline moderate variability: smooth random walk
+      baselineVal += (Math.random() - 0.5) * 0.4;
+      if (baselineVal < 8) baselineVal = 8;
+      if (baselineVal > 18) baselineVal = 18;
+
+      // contraction contribution (smooth dome)
+      let contractionAdd = 0;
       contractions.forEach(c => {
         if (tSec >= c.startSec && tSec <= c.endSec) {
           const phase = (tSec - c.startSec) / (c.endSec - c.startSec); // 0–1
           const clampedPhase = Math.max(0, Math.min(1, phase));
-          // smooth rounded hump, not pointed
-          const factor = Math.sin(clampedPhase * Math.PI);
-          value += c.amp * factor;
+          // Smooth cosine dome: 0→1→0 with gradual slopes
+          const factor = (1 - Math.cos(Math.PI * clampedPhase)) / 2;
+          contractionAdd = Math.max(contractionAdd, c.amp * factor);
         }
       });
+
+      let value = baselineVal + contractionAdd;
+
+      // extra smoothing of overall trace
+      if (i > 0) {
+        value = prevTotal * 0.7 + value * 0.3;
+      }
+      prevTotal = value;
 
       if (value < minVal) value = minVal;
       if (value > maxVal) value = maxVal;
