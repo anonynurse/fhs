@@ -100,8 +100,7 @@
 
   <div class="side-panel">
     <h2>Strip Details</h2>
-    <p>On each page load, a new fetal heart rate baseline and variability
-       are randomly generated.</p>
+    <p>A new baseline and variability are randomly generated on each load.</p>
 
     <div class="field-group">
       <label for="baselineField">Baseline FHR</label>
@@ -125,105 +124,107 @@
 </div>
 
 <script>
+(function () {
   function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   function pickVariability() {
     const options = [
-      { name: "Absent",   amplitude: 1,   step: 0.5 },
-      { name: "Mild (< 5 bpm)", amplitude: 4,   step: 1.0 },
+      { name: "Absent", amplitude: 1, step: 0.5 },
+      { name: "Mild (< 5 bpm)", amplitude: 4, step: 1.0 },
       { name: "Moderate (6–25 bpm)", amplitude: 18, step: 1.8 },
-      { name: "Marked (> 25 bpm)",   amplitude: 32, step: 3.2 }
+      { name: "Marked (> 25 bpm)", amplitude: 32, step: 3.2 }
     ];
     return options[Math.floor(Math.random() * options.length)];
   }
 
   function drawGrid(ctx, width, height, bpmMin, bpmMax) {
-    ctx.save();
-
-    // ----- X axis: 10 minutes wide -----
     const totalMinutes = 10;
-    const secondsPerSmall = 10;               // 10s per small box
-    const smallBoxes = totalMinutes * 60 / secondsPerSmall; // 60
-    const minorX = width / smallBoxes;        // distance for 10s
-    const majorX = minorX * 6;                // every minute (6×10s)
+    const secondsPerSmallBox = 10;
+    const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
+    const totalSmallBoxes = totalMinutes * smallBoxesPerMinute; // 60
+    const smallBoxWidth = width / totalSmallBoxes;
+    const minuteWidth = smallBoxWidth * smallBoxesPerMinute;
 
-    // Minor vertical lines (10s)
+    // ---- vertical lines (time) ----
+    // minor 10s
+    ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.25)";
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    for (let i = 0; i <= smallBoxes; i++) {
-      const x = i * minorX + 0.5;
+    for (let i = 0; i <= totalSmallBoxes; i++) {
+      const x = i * smallBoxWidth + 0.5;
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
     }
     ctx.stroke();
+    ctx.restore();
 
-    // Major vertical lines (minutes)
+    // major minutes
+    ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.75)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    const minuteLines = totalMinutes;
-    for (let i = 0; i <= minuteLines; i++) {
-      const x = i * majorX + 0.5;
+    for (let i = 0; i <= totalMinutes; i++) {
+      const x = i * minuteWidth + 0.5;
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
     }
     ctx.stroke();
+    ctx.restore();
 
-    // Highlight centre line (5-minute mark / y-axis)
+    // center vertical (acts like y-axis)
     const midX = width / 2 + 0.5;
-    ctx.strokeStyle = "rgba(239,68,68,0.95)"; // brighter red
+    ctx.save();
+    ctx.strokeStyle = "rgba(239,68,68,0.95)";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(midX, 0);
     ctx.lineTo(midX, height);
     ctx.stroke();
+    ctx.restore();
 
-    // ----- Y axis: BPM grid -----
-    const bpmRange = bpmMax - bpmMin;
+    // ---- horizontal lines (BPM) ----
+    const bpmSpan = bpmMax - bpmMin;
+    const pixelsPerBpm = height / bpmSpan;
 
-    // Minor horizontal lines: every 10 bpm
-    const tenBpmSteps = bpmRange / 10;  // 21 for 30–240
-    const minorY = height / tenBpmSteps;
+    // minor 10 bpm
+    ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.25)";
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    for (let j = 0; j <= tenBpmSteps; j++) {
-      const y = j * minorY + 0.5;
+    for (let bpm = bpmMin; bpm <= bpmMax; bpm += 10) {
+      const y = height - (bpm - bpmMin) * pixelsPerBpm + 0.5;
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
     }
     ctx.stroke();
+    ctx.restore();
 
-    // Major horizontal lines: every 30 bpm
-    const thirtyBpmSteps = bpmRange / 30; // 7
-    const majorY = height / thirtyBpmSteps;
+    // major 30 bpm
+    ctx.save();
     ctx.strokeStyle = "rgba(255,0,0,0.75)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let j = 0; j <= thirtyBpmSteps; j++) {
-      const y = j * majorY + 0.5;
+    for (let bpm = bpmMin; bpm <= bpmMax; bpm += 30) {
+      const y = height - (bpm - bpmMin) * pixelsPerBpm + 0.5;
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
     }
     ctx.stroke();
-
     ctx.restore();
 
-    // ----- BPM labels along central y-axis -----
-    const labelMidX = width / 2;
+    // ---- BPM labels along the centre ----
     ctx.save();
-    ctx.fillStyle = "rgba(239,68,68,1)";  // red text
+    ctx.fillStyle = "rgba(239,68,68,1)";
     ctx.font = "10px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    for (let value = bpmMax; value >= bpmMin; value -= 30) {
-      const ratio = (value - bpmMin) / bpmRange;      // 0 at min, 1 at max
-      const y = height - ratio * height;
-      ctx.fillText(String(value), labelMidX, y);
+    for (let bpm = bpmMin; bpm <= bpmMax; bpm += 30) {
+      const y = height - (bpm - bpmMin) * pixelsPerBpm;
+      ctx.fillText(String(bpm), midX, y);
     }
     ctx.restore();
   }
@@ -234,35 +235,31 @@
     const width = canvas.width;
     const height = canvas.height;
 
-    // Grid BPM range
     const bpmMinGrid = 30;
     const bpmMaxGrid = 240;
 
-    // Random baseline & variability
     const baseline = randomInt(110, 160);
     const variability = pickVariability();
     const amplitude = variability.amplitude;
     const stepSize = variability.step;
 
-    // Update side panel fields
+    // side panel
     document.getElementById("baselineField").value = baseline + " bpm";
     document.getElementById("variabilityField").value = variability.name;
     document.getElementById("rangeField").value =
       (baseline - amplitude).toFixed(0) + " – " +
       (baseline + amplitude).toFixed(0) + " bpm";
 
-    // Clear and draw grid
     ctx.clearRect(0, 0, width, height);
     drawGrid(ctx, width, height, bpmMinGrid, bpmMaxGrid);
 
-    // Mapping bpm → canvas y
+    const pixelsPerBpm = height / (bpmMaxGrid - bpmMinGrid);
     function bpmToY(bpm) {
       const clamped = Math.max(bpmMinGrid, Math.min(bpmMaxGrid, bpm));
-      const ratio = (clamped - bpmMinGrid) / (bpmMaxGrid - bpmMinGrid);
-      return height - ratio * height;
+      return height - (clamped - bpmMinGrid) * pixelsPerBpm;
     }
 
-    // Draw baseline dashed line
+    // baseline dashed line
     ctx.save();
     ctx.strokeStyle = "rgba(37,99,235,0.7)";
     ctx.lineWidth = 1;
@@ -274,9 +271,15 @@
     ctx.stroke();
     ctx.restore();
 
-    // Random-walk FHR around baseline
-    const totalPoints = 600;        // resolution
+    // FHR random walk
+    const totalMinutes = 10;
+    const secondsPerSmallBox = 10;
+    const smallBoxesPerMinute = 60 / secondsPerSmallBox; // 6
+    const totalSmallBoxes = totalMinutes * smallBoxesPerMinute; // 60
+    const pointsPerSmallBox = 10; // makes 600 points total
+    const totalPoints = totalSmallBoxes * pointsPerSmallBox;
     const xStep = width / (totalPoints - 1);
+
     let currentBpm = baseline;
     const minBpm = baseline - amplitude;
     const maxBpm = baseline + amplitude;
@@ -290,11 +293,9 @@
       if (i > 0) {
         const delta = (Math.random() - 0.5) * 2 * stepSize;
         currentBpm += delta;
-
         if (currentBpm < minBpm) currentBpm = minBpm + Math.random() * stepSize;
         if (currentBpm > maxBpm) currentBpm = maxBpm - Math.random() * stepSize;
       }
-
       const x = i * xStep;
       const y = bpmToY(currentBpm);
 
@@ -307,6 +308,7 @@
   }
 
   window.addEventListener("DOMContentLoaded", generateFHRStrip);
+})();
 </script>
 </body>
 </html>
