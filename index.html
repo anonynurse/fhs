@@ -72,7 +72,7 @@
 
     .field-row {
       display: flex;
-      align-items: flex-start; /* buttons aligned from the top */
+      align-items: flex-start;
       gap: 8px;
     }
 
@@ -112,7 +112,7 @@
     }
     .check-btn {
       padding: 6px 10px;
-      margin-top: 18px; /* roughly lines up with input */
+      margin-top: 18px;
     }
 
     @media (max-width: 800px) {
@@ -455,9 +455,10 @@
   }
 
   // Apply 0–2 accelerations AFTER variability is generated
-  function applyAccelerations(baseline) {
+  function applyAccelerations(baseline, allowAccels) {
     accelMetas = [];
     if (!fhrTrace || fhrTrace.length === 0) return;
+    if (!allowAccels) return;
 
     const totalPoints = fhrTrace.length;
     const totalSeconds = totalMinutes * 60;
@@ -564,8 +565,13 @@
       fhrTrace.push(currentBpm);
     }
 
+    // Only allow accels if variability is NOT absent/minimal
+    const allowAccels =
+      !variability.name.startsWith("Absent") &&
+      !variability.name.startsWith("Minimal");
+
     // Second pass: add 0–2 accels (not counted toward variability)
-    applyAccelerations(baseline);
+    applyAccelerations(baseline, allowAccels);
 
     // Reset quiz fields
     document.getElementById("baselineField").value = "";
@@ -762,7 +768,6 @@
       const width = canvas.width;
       const height = canvas.height;
 
-      // Hit test near bottom for each marker
       const bottomRegionHeight = 40;
       for (let i = 0; i < userMarkers.length; i++) {
         const markerX = userMarkers[i].xNorm * width;
