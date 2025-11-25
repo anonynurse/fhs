@@ -57,17 +57,9 @@
     .top-controls {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       gap: 12px;
       margin-bottom: 4px;
-    }
-
-    .toco-toggle {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      color: #4b5563;
     }
 
     .field-row {
@@ -128,16 +120,12 @@
   <div class="strip-card">
     <div class="strip-title">Fetal Heart Rate Strip (simulated)</div>
     <canvas id="fhrCanvas" width="900" height="350"></canvas>
-    <canvas id="tocoCanvas" width="900" height="150" style="display:none;"></canvas>
+    <canvas id="tocoCanvas" width="900" height="150"></canvas>
   </div>
 
   <div class="side-panel">
     <div class="top-controls">
       <button id="newStripBtn" class="btn">New</button>
-      <label class="toco-toggle">
-        <input type="checkbox" id="tocoCheckbox">
-        TOCO
-      </label>
     </div>
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:4px 0 8px;">
 
@@ -390,7 +378,7 @@
   }
 
   function drawAccelTruthOverlayOnCtx(ctx, width, height) {
-    if (!showAccelTruthOverlay || !accelMetas || !accelMetas.length || !fhrTrace.length) return;
+    if (!showAccelTruthOverlay || !fhrTrace.length) return;
 
     const totalPoints = fhrTrace.length;
     const xStep = totalPoints > 1 ? width / (totalPoints - 1) : width;
@@ -401,10 +389,16 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
 
-    accelMetas.forEach(meta => {
-      const x = meta.peakIdx * xStep;
-      ctx.fillText("ACCEL", x, 2);
-    });
+    if (!accelMetas || accelMetas.length === 0) {
+      // No accels on this strip
+      ctx.fillText("NO ACCELS", width / 2, 2);
+    } else {
+      // Label each accel at its peak
+      accelMetas.forEach(meta => {
+        const x = meta.peakIdx * xStep;
+        ctx.fillText("ACCEL", x, 2);
+      });
+    }
 
     ctx.restore();
   }
@@ -581,13 +575,8 @@
     document.getElementById("variabilityCorrect").hidden = true;
     document.getElementById("rangeCorrect").hidden = true;
 
-    // TOCO
-    const tocoCheckbox = document.getElementById("tocoCheckbox");
-    if (tocoCheckbox && tocoCheckbox.checked) {
-      generateTocoStrip();
-    } else {
-      hideTocoStrip();
-    }
+    // Always show TOCO, with at most 1 contraction
+    generateTocoStrip();
 
     // Render FHR
     renderFHRStrip();
@@ -598,8 +587,6 @@
     const ctx = canvas.getContext("2d");
     const width = canvas.width;
     const height = canvas.height;
-
-    canvas.style.display = "block";
 
     const minVal = 0;
     const maxVal = 100;
@@ -616,9 +603,9 @@
       return height - (clamped - minVal) * pixelsPerVal;
     }
 
-    // --- Contractions: hard cap of 2, clearly spaced ---
+    // Contractions: limit to 1 (0 or 1)
     const contractions = [];
-    const contractionCount = randomInt(0, 2); // 0, 1, or 2
+    const contractionCount = randomInt(0, 1); // 0 or 1
     const totalSeconds = totalMinutes * 60;
 
     if (contractionCount === 1) {
@@ -628,24 +615,6 @@
       const startSec = centerMin * 60 - durationSec / 2;
       const endSec = centerMin * 60 + durationSec / 2;
       contractions.push({ startSec, endSec, amp });
-    } else if (contractionCount === 2) {
-      const centerMin1 = randomFloat(2, 4);
-      const centerMin2 = randomFloat(6, 8);
-      const durationSec1 = randomInt(60, 120);
-      const durationSec2 = randomInt(60, 120);
-      const amp1 = randomInt(35, 70);
-      const amp2 = randomInt(35, 70);
-
-      contractions.push({
-        startSec: centerMin1 * 60 - durationSec1 / 2,
-        endSec: centerMin1 * 60 + durationSec1 / 2,
-        amp: amp1
-      });
-      contractions.push({
-        startSec: centerMin2 * 60 - durationSec2 / 2,
-        endSec: centerMin2 * 60 + durationSec2 / 2,
-        amp: amp2
-      });
     }
 
     const pointsPerSmallBox = 10;
@@ -697,13 +666,6 @@
     ctx.restore();
   }
 
-  function hideTocoStrip() {
-    const canvas = document.getElementById("tocoCanvas");
-    const ctx = canvas.getContext("2d");
-    canvas.style.display = "none";
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-
   function setupCheckButtons() {
     document.querySelectorAll(".check-btn").forEach(btn => {
       btn.addEventListener("click", function () {
@@ -730,15 +692,6 @@
   function setupTopControls() {
     document.getElementById("newStripBtn")
       .addEventListener("click", generateFHRStrip);
-
-    document.getElementById("tocoCheckbox")
-      .addEventListener("change", function () {
-        if (this.checked) {
-          generateTocoStrip();
-        } else {
-          hideTocoStrip();
-        }
-      });
   }
 
   function setupAccelControls() {
