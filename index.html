@@ -390,10 +390,8 @@
     ctx.textBaseline = "top";
 
     if (!accelMetas || accelMetas.length === 0) {
-      // No accels on this strip
       ctx.fillText("NO ACCELS", width / 2, 2);
     } else {
-      // Label each accel at its peak
       accelMetas.forEach(meta => {
         const x = meta.peakIdx * xStep;
         ctx.fillText("ACCEL", x, 2);
@@ -699,7 +697,6 @@
     const checkBtn = document.getElementById("checkAccelBtn");
 
     addBtn.addEventListener("click", function () {
-      // Allow multiple markers (e.g., up to 3)
       if (userMarkers.length >= 3) return;
       userMarkers.push({ xNorm: 0.5 });
       renderFHRStrip();
