@@ -72,7 +72,7 @@
 
     .field-row {
       display: flex;
-      align-items: flex-end;   /* align bottoms so button lines up with input */
+      align-items: flex-start; /* buttons aligned from the top */
       gap: 8px;
     }
 
@@ -112,6 +112,7 @@
     }
     .check-btn {
       padding: 6px 10px;
+      margin-top: 18px; /* roughly lines up with input */
     }
 
     @media (max-width: 800px) {
@@ -127,9 +128,6 @@
   <div class="strip-card">
     <div class="strip-title">Fetal Heart Rate Strip (simulated)</div>
     <canvas id="fhrCanvas" width="900" height="350"></canvas>
-    <!-- Slider to place accel start marker -->
-    <input type="range" id="accelSlider" min="0" max="1000" value="500"
-           style="width:100%; margin-top:6px; display:none;">
     <canvas id="tocoCanvas" width="900" height="150" style="display:none;"></canvas>
   </div>
 
@@ -143,9 +141,14 @@
     </div>
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:4px 0 8px;">
 
-    <button id="addAccelBtn" class="btn" style="align-self:flex-start;">
-      Add accel marker
-    </button>
+    <div style="display:flex; gap:8px;">
+      <button id="addAccelBtn" class="btn" style="align-self:flex-start;">
+        Add accel marker
+      </button>
+      <button id="checkAccelBtn" class="btn" style="align-self:flex-start;">
+        Check accels
+      </button>
+    </div>
 
     <div class="field-row">
       <div class="field-group">
@@ -192,14 +195,17 @@
   let correctVariability = "";
   let correctRange = "";
 
-  // FHR trace in bpm, one value per time step
+  // FHR trace: bpm value per time step
   let fhrTrace = [];
-  // accel info (for future use if you want to grade placement)
-  let accelMeta = null;
+  // True accelerations metadata (0–2)
+  let accelMetas = [];
 
-  // overlay states
+  // Overlays
   let showBaselineOverlay = false;
-  let accelSliderPosition = null; // 0..1 or null
+  let showAccelTruthOverlay = false;
+  // User markers (each is { xNorm: 0..1 })
+  let userMarkers = [];
+  let draggingMarkerIndex = null;
 
   function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -353,18 +359,53 @@
     ctx.restore();
   }
 
-  function drawAccelMarkerOnCtx(ctx, width, height) {
-    if (accelSliderPosition == null) return;
-    const x = accelSliderPosition * width;
+  function drawUserMarkers(ctx, width, height) {
+    if (!userMarkers.length) return;
 
     ctx.save();
     ctx.strokeStyle = "rgba(37,99,235,0.9)";
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(x + 0.5, 0);
-    ctx.lineTo(x + 0.5, height);
-    ctx.stroke();
+
+    userMarkers.forEach(marker => {
+      const x = marker.xNorm * width + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    });
+
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(37,99,235,0.95)";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+
+    userMarkers.forEach(marker => {
+      const x = marker.xNorm * width;
+      ctx.fillText("accel", x, height - 2);
+    });
+
+    ctx.restore();
+  }
+
+  function drawAccelTruthOverlayOnCtx(ctx, width, height) {
+    if (!showAccelTruthOverlay || !accelMetas || !accelMetas.length || !fhrTrace.length) return;
+
+    const totalPoints = fhrTrace.length;
+    const xStep = totalPoints > 1 ? width / (totalPoints - 1) : width;
+
+    ctx.save();
+    ctx.fillStyle = "rgba(220,38,38,0.98)";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+
+    accelMetas.forEach(meta => {
+      const x = meta.peakIdx * xStep;
+      ctx.fillText("ACCEL", x, 2);
+    });
+
     ctx.restore();
   }
 
@@ -408,78 +449,71 @@
     if (showBaselineOverlay) {
       drawBaselineOverlayOnCtx(ctx, width, height);
     }
-    if (accelSliderPosition != null) {
-      drawAccelMarkerOnCtx(ctx, width, height);
-    }
+
+    drawUserMarkers(ctx, width, height);
+    drawAccelTruthOverlayOnCtx(ctx, width, height);
   }
 
-  // Apply 0 or 1 acceleration AFTER variability is generated
-  function applyAccelerationIfAny(baseline) {
-    accelMeta = null;
+  // Apply 0–2 accelerations AFTER variability is generated
+  function applyAccelerations(baseline) {
+    accelMetas = [];
     if (!fhrTrace || fhrTrace.length === 0) return;
-
-    const accelCount = randomInt(0, 1); // 0 or 1
-    if (accelCount === 0) return;
 
     const totalPoints = fhrTrace.length;
     const totalSeconds = totalMinutes * 60;
 
-    // Duration of accel (baseline->baseline), must be >=15 sec
-    const minDurSec = 15;
-    const maxDurSec = 90;
-    const accelDurationSec = randomInt(minDurSec, maxDurSec);
+    const accelCount = randomInt(0, 2);
 
-    // Onset to peak < 30 sec
-    const maxOnsetToPeakSec = Math.min(30, accelDurationSec - 5);
-    const onsetToPeakSec = randomInt(5, maxOnsetToPeakSec);
+    for (let k = 0; k < accelCount; k++) {
+      const minDurSec = 15;
+      const maxDurSec = 90;
+      const accelDurationSec = randomInt(minDurSec, maxDurSec);
 
-    // Amplitude >= 15 bpm above baseline
-    const accelAmp = randomInt(15, 30);
+      const maxOnsetToPeakSec = Math.min(30, accelDurationSec - 5);
+      const onsetToPeakSec = randomInt(5, maxOnsetToPeakSec);
 
-    // Start time with padding so accel fits fully within trace
-    const startSec = randomInt(10, totalSeconds - accelDurationSec - 10);
-    const peakSec = startSec + onsetToPeakSec;
-    const endSec = startSec + accelDurationSec;
+      const accelAmp = randomInt(15, 30);
 
-    function secToIndex(sec) {
-      return Math.floor(sec / totalSeconds * (totalPoints - 1));
-    }
+      const startSec = randomInt(10, totalSeconds - accelDurationSec - 10);
+      const peakSec = startSec + onsetToPeakSec;
+      const endSec = startSec + accelDurationSec;
 
-    const startIdx = secToIndex(startSec);
-    const peakIdx = secToIndex(peakSec);
-    const endIdx = secToIndex(endSec);
-
-    for (let i = startIdx; i <= endIdx && i < totalPoints; i++) {
-      let t;
-      if (i <= peakIdx) {
-        const denom = (peakIdx - startIdx) || 1;
-        t = (i - startIdx) / denom; // 0→1
-      } else {
-        const denom = (endIdx - peakIdx) || 1;
-        t = 1 - (i - peakIdx) / denom; // 1→0
+      function secToIndex(sec) {
+        return Math.floor(sec / totalSeconds * (totalPoints - 1));
       }
-      if (t < 0) t = 0;
-      if (t > 1) t = 1;
-      fhrTrace[i] += accelAmp * t;
-    }
 
-    accelMeta = {
-      startSec,
-      peakSec,
-      endSec,
-      amp: accelAmp,
-      startIdx,
-      peakIdx,
-      endIdx,
-      baseline
-    };
+      const startIdx = secToIndex(startSec);
+      const peakIdx = secToIndex(peakSec);
+      const endIdx = secToIndex(endSec);
+
+      for (let i = startIdx; i <= endIdx && i < totalPoints; i++) {
+        let t;
+        if (i <= peakIdx) {
+          const denom = (peakIdx - startIdx) || 1;
+          t = (i - startIdx) / denom; // 0→1
+        } else {
+          const denom = (endIdx - peakIdx) || 1;
+          t = 1 - (i - peakIdx) / denom; // 1→0
+        }
+        if (t < 0) t = 0;
+        if (t > 1) t = 1;
+        fhrTrace[i] += accelAmp * t;
+      }
+
+      accelMetas.push({
+        startSec,
+        peakSec,
+        endSec,
+        amp: accelAmp,
+        startIdx,
+        peakIdx,
+        endIdx,
+        baseline
+      });
+    }
   }
 
   function generateFHRStrip() {
-    const canvas = document.getElementById("fhrCanvas");
-    const width = canvas.width;
-    const height = canvas.height;
-
     // Baseline: 90–180 overall, but 80% chance within 110–160.
     let rawBaseline;
     if (Math.random() < 0.8) {
@@ -504,16 +538,12 @@
       (baseline - amplitude).toFixed(0) + " – " +
       (baseline + amplitude).toFixed(0) + " bpm";
 
-    // Reset overlay states
+    // Reset overlays and markers
     showBaselineOverlay = false;
-    accelSliderPosition = null;
-    accelMeta = null;
-
-    // Hide accel slider when generating new strip
-    const accelSlider = document.getElementById("accelSlider");
-    if (accelSlider) {
-      accelSlider.style.display = "none";
-    }
+    showAccelTruthOverlay = false;
+    userMarkers = [];
+    draggingMarkerIndex = null;
+    accelMetas = [];
 
     // Build FHR trace as random walk around baseline (variability only)
     const pointsPerSmallBox = 10;
@@ -534,8 +564,8 @@
       fhrTrace.push(currentBpm);
     }
 
-    // Second pass: add 0 or 1 accel that does NOT count toward variability
-    applyAccelerationIfAny(baseline);
+    // Second pass: add 0–2 accels (not counted toward variability)
+    applyAccelerations(baseline);
 
     // Reset quiz fields
     document.getElementById("baselineField").value = "";
@@ -553,7 +583,7 @@
       hideTocoStrip();
     }
 
-    // Finally, render FHR
+    // Render FHR
     renderFHRStrip();
   }
 
@@ -706,21 +736,65 @@
   }
 
   function setupAccelControls() {
-    const slider = document.getElementById("accelSlider");
     const addBtn = document.getElementById("addAccelBtn");
+    const checkBtn = document.getElementById("checkAccelBtn");
 
     addBtn.addEventListener("click", function () {
-      slider.style.display = "block";
-      if (accelSliderPosition == null) {
-        accelSliderPosition = 0.5;
-        slider.value = 500;
-      }
+      // Allow multiple markers (e.g., up to 3)
+      if (userMarkers.length >= 3) return;
+      userMarkers.push({ xNorm: 0.5 });
       renderFHRStrip();
     });
 
-    slider.addEventListener("input", function () {
-      accelSliderPosition = this.value / 1000;
+    checkBtn.addEventListener("click", function () {
+      showAccelTruthOverlay = true;
       renderFHRStrip();
+    });
+  }
+
+  function setupCanvasDrag() {
+    const canvas = document.getElementById("fhrCanvas");
+
+    canvas.addEventListener("mousedown", function (e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Hit test near bottom for each marker
+      const bottomRegionHeight = 40;
+      for (let i = 0; i < userMarkers.length; i++) {
+        const markerX = userMarkers[i].xNorm * width;
+        const distX = Math.abs(x - markerX);
+        const inBottom = (y > height - bottomRegionHeight);
+        if (distX < 10 && inBottom) {
+          draggingMarkerIndex = i;
+          break;
+        }
+      }
+    });
+
+    canvas.addEventListener("mousemove", function (e) {
+      if (draggingMarkerIndex === null) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const width = canvas.width;
+
+      let xNorm = x / width;
+      if (xNorm < 0) xNorm = 0;
+      if (xNorm > 1) xNorm = 1;
+
+      userMarkers[draggingMarkerIndex].xNorm = xNorm;
+      renderFHRStrip();
+    });
+
+    canvas.addEventListener("mouseup", function () {
+      draggingMarkerIndex = null;
+    });
+
+    canvas.addEventListener("mouseleave", function () {
+      draggingMarkerIndex = null;
     });
   }
 
@@ -729,6 +803,7 @@
     setupCheckButtons();
     setupTopControls();
     setupAccelControls();
+    setupCanvasDrag();
   });
 })();
 </script>
