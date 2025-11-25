@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Fetal Heart Surveillance Practice</title>
+  <!-- Important for mobile media queries & sizing -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -38,7 +40,8 @@
       border: 1px solid #e5e7eb;
       background: #fff;
       display: block;
-      width: 100%;   /* visual width; real drawing width set in JS */
+      max-width: 100%;  /* scale to container on mobile */
+      height: auto;
     }
     #tocoCanvas {
       margin-top: 12px;
@@ -108,15 +111,13 @@
       margin-top: 18px;
     }
 
-    @media (max-width: 800px) {
+    /* Mobile: side panel below, graphs full width */
+    @media (max-width: 900px) {
       .layout {
         flex-direction: column;
-        height: auto; /* allow page to scroll on mobile */
+        height: auto; /* allow scrolling */
       }
-      .strip-card {
-        width: 100%;
-      }
-      .side-panel {
+      .strip-card, .side-panel {
         width: 100%;
       }
     }
@@ -126,8 +127,9 @@
 <div class="layout">
   <div class="strip-card">
     <div class="strip-title">Fetal Heart Rate Strip (simulated)</div>
-    <canvas id="fhrCanvas"></canvas>
-    <canvas id="tocoCanvas"></canvas>
+    <!-- Fixed internal resolution; visually scaled via CSS -->
+    <canvas id="fhrCanvas" width="900" height="350"></canvas>
+    <canvas id="tocoCanvas" width="900" height="150"></canvas>
   </div>
 
   <div class="side-panel">
@@ -638,7 +640,7 @@
       const tSec = (i / (totalPoints - 1)) * totalSeconds;
 
       // squiggly random walk baseline
-      baselineVal += (Math.random() - 0.5) * 3.0; // bigger steps
+      baselineVal += (Math.random() - 0.5) * 3.0;
       if (baselineVal < 8) baselineVal = 8;
       if (baselineVal > 25) baselineVal = 25;
 
@@ -715,7 +717,7 @@
     });
   }
 
-  // Helper: get canvas-relative coords for mouse/touch
+  // Helper: get canvas-relative coords for mouse/touch (CSS pixels)
   function getCanvasPos(evt, canvas) {
     const rect = canvas.getBoundingClientRect();
     let clientX, clientY;
@@ -733,7 +735,8 @@
 
     return {
       x: clientX - rect.left,
-      y: clientY - rect.top
+      y: clientY - rect.top,
+      rect
     };
   }
 
@@ -741,17 +744,15 @@
     const canvas = document.getElementById("fhrCanvas");
 
     function startDrag(evt) {
-      const pos = getCanvasPos(evt, canvas);
-      const x = pos.x;
-      const y = pos.y;
-      const width = canvas.width;
-      const height = canvas.height;
+      const { x, y, rect } = getCanvasPos(evt, canvas);
+      const cssWidth = rect.width;
+      const cssHeight = rect.height;
 
       const bottomRegionHeight = 40;
       for (let i = 0; i < userMarkers.length; i++) {
-        const markerX = userMarkers[i].xNorm * width;
-        const distX = Math.abs(x - markerX);
-        const inBottom = (y > height - bottomRegionHeight);
+        const markerCssX = userMarkers[i].xNorm * cssWidth;
+        const distX = Math.abs(x - markerCssX);
+        const inBottom = (y > cssHeight - bottomRegionHeight);
         if (distX < 10 && inBottom) {
           draggingMarkerIndex = i;
           break;
@@ -761,11 +762,10 @@
 
     function moveDrag(evt) {
       if (draggingMarkerIndex === null) return;
-      const pos = getCanvasPos(evt, canvas);
-      const x = pos.x;
-      const width = canvas.width;
+      const { x, rect } = getCanvasPos(evt, canvas);
+      const cssWidth = rect.width;
 
-      let xNorm = x / width;
+      let xNorm = x / cssWidth;
       if (xNorm < 0) xNorm = 0;
       if (xNorm > 1) xNorm = 1;
 
@@ -814,42 +814,12 @@
     });
   }
 
-  // Responsive canvas sizing
-  function resizeCanvases() {
-    const stripCard = document.querySelector(".strip-card");
-    const fhrCanvas = document.getElementById("fhrCanvas");
-    const tocoCanvas = document.getElementById("tocoCanvas");
-
-    if (!stripCard || !fhrCanvas || !tocoCanvas) return;
-
-    const rect = stripCard.getBoundingClientRect();
-    const availableWidth = Math.max(300, rect.width - 24); // padding margin guard
-    const isMobile = window.innerWidth <= 800;
-
-    fhrCanvas.width = availableWidth;
-    fhrCanvas.height = isMobile ? 420 : 350;
-
-    tocoCanvas.width = availableWidth;
-    tocoCanvas.height = isMobile ? 200 : 150;
-
-    // Re-draw current FHR strip with new size
-    renderFHRStrip();
-    // Regenerate TOCO with new size (visual-only; okay if shape changes on resize)
-    generateTocoStrip();
-  }
-
   window.addEventListener("DOMContentLoaded", function () {
-    // Initial sizing before generating data
-    resizeCanvases();
-
     generateFHRStrip();
     setupCheckButtons();
     setupTopControls();
     setupAccelControls();
     setupCanvasDrag();
-
-    // Re-resize on window changes
-    window.addEventListener("resize", resizeCanvases);
   });
 })();
 </script>
