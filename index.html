@@ -216,14 +216,14 @@
   function pickVariability() {
     const r = Math.random();
 
-    if (r < 0.15) {
+    if (r < 0.10) {
       // Absent
       return {
         name: "Absent",
         amplitude: 0.5,        // P–T ≈ 1
         step: 0.2
       };
-    } else if (r < 0.45) {
+    } else if (r < 0.30) {
       // Minimal 1–5 bpm
       const amp = randomFloat(0.8, 2.5);
       return {
@@ -231,7 +231,7 @@
         amplitude: amp,
         step: amp * 0.6
       };
-    } else if (r < 0.80) {
+    } else if (r < 0.85) {
       // Moderate 6–25 bpm
       const amp = randomFloat(3, 12.5);
       return {
