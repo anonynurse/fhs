@@ -3,131 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>Fetal Heart Surveillance Practice</title>
-  <!-- Important for mobile media queries & sizing -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   sans-serif;
-      background: #f3f4f6;
-    }
-    .layout {
-      display: flex;
-      gap: 16px;
-      padding: 16px;
-      height: 100vh;
-    }
-    .strip-card {
-      flex: 3;
-      background: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-      padding: 12px 12px 16px;
-      display: flex;
-      flex-direction: column;
-    }
-    .strip-title {
-      font-weight: 600;
-      margin-bottom: 8px;
-      font-size: 0.95rem;
-      color: #111827;
-    }
-    canvas {
-      border-radius: 6px;
-      border: 1px solid #e5e7eb;
-      background: #fff;
-      display: block;
-      max-width: 100%;  /* scale to container on mobile */
-      height: auto;
-    }
-    #tocoCanvas {
-      margin-top: 12px;
-    }
-
-    .side-panel {
-      flex: 1;
-      background: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .top-controls {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 12px;
-      margin-bottom: 4px;
-    }
-
-    .field-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
-    .field-group {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .field-group label {
-      font-size: 0.8rem;
-      color: #4b5563;
-    }
-    .field-group input {
-      padding: 6px 8px;
-      border-radius: 6px;
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
-      font-size: 0.85rem;
-    }
-    .correct-label {
-      font-size: 0.8rem;
-      color: #10b981;
-    }
-    .btn {
-      padding: 6px 12px;
-      border-radius: 6px;
-      border: none;
-      background: #2563eb;
-      color: #ffffff;
-      font-size: 0.8rem;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .btn:hover {
-      background: #1d4ed8;
-    }
-    .check-btn {
-      padding: 6px 10px;
-      margin-top: 18px;
-    }
-
-    /* Mobile: side panel below, graphs full width */
-    @media (max-width: 900px) {
-      .layout {
-        flex-direction: column;
-        height: auto; /* allow scrolling */
-      }
-      .strip-card, .side-panel {
-        width: 100%;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="layout">
   <div class="strip-card">
     <div class="strip-title">Fetal Heart Rate Strip (simulated)</div>
-    <!-- Fixed internal resolution; visually scaled via CSS -->
     <canvas id="fhrCanvas" width="900" height="350"></canvas>
     <canvas id="tocoCanvas" width="900" height="150"></canvas>
   </div>
@@ -147,6 +29,7 @@
       </button>
     </div>
 
+    <!-- Baseline -->
     <div class="field-row">
       <div class="field-group">
         <label for="baselineField">Baseline FHR (bpm)</label>
@@ -156,21 +39,42 @@
       <button class="btn check-btn" data-target="baseline">Check</button>
     </div>
 
+    <!-- Variability (radio buttons) -->
     <div class="field-row">
       <div class="field-group">
-        <label for="variabilityField">Variability</label>
-        <input id="variabilityField" type="text" autocomplete="off"
-               placeholder="Absent / Minimal / Moderate / Marked">
+        <label>Variability</label>
+        <div class="radio-group">
+          <label class="var-label" id="var-absent-label">
+            <input type="radio" name="variabilityChoice" value="absent">
+            Absent
+          </label>
+          <label class="var-label" id="var-minimal-label">
+            <input type="radio" name="variabilityChoice" value="minimal">
+            Minimal
+          </label>
+          <label class="var-label" id="var-moderate-label">
+            <input type="radio" name="variabilityChoice" value="moderate">
+            Moderate
+          </label>
+          <label class="var-label" id="var-marked-label">
+            <input type="radio" name="variabilityChoice" value="marked">
+            Marked
+          </label>
+        </div>
         <div id="variabilityCorrect" class="correct-label" hidden></div>
       </div>
       <button class="btn check-btn" data-target="variability">Check</button>
     </div>
 
+    <!-- Range: two inputs with hyphen -->
     <div class="field-row">
       <div class="field-group">
-        <label for="rangeField">Approx. Range (bpm)</label>
-        <input id="rangeField" type="text" autocomplete="off"
-               placeholder="e.g. 130 – 150 bpm">
+        <label>Approx. Range (bpm)</label>
+        <div class="range-inputs">
+          <input id="rangeLowField" type="text" autocomplete="off" placeholder="130">
+          <span>–</span>
+          <input id="rangeHighField" type="text" autocomplete="off" placeholder="150">
+        </div>
         <div id="rangeCorrect" class="correct-label" hidden></div>
       </div>
       <button class="btn check-btn" data-target="range">Check</button>
@@ -216,14 +120,14 @@
   function pickVariability() {
     const r = Math.random();
 
-    if (r < 0.10) {
+    if (r < 0.15) {
       // Absent
       return {
         name: "Absent",
         amplitude: 0.5,        // P–T ≈ 1
         step: 0.2
       };
-    } else if (r < 0.30) {
+    } else if (r < 0.45) {
       // Minimal 1–5 bpm
       const amp = randomFloat(0.8, 2.5);
       return {
@@ -231,7 +135,7 @@
         amplitude: amp,
         step: amp * 0.6
       };
-    } else if (r < 0.85) {
+    } else if (r < 0.80) {
       // Moderate 6–25 bpm
       const amp = randomFloat(3, 12.5);
       return {
@@ -248,6 +152,16 @@
         step: amp * 0.4
       };
     }
+  }
+
+  function getVariabilityCategory() {
+    if (!correctVariability) return null;
+    const v = correctVariability.toLowerCase();
+    if (v.startsWith("absent")) return "absent";
+    if (v.startsWith("minimal")) return "minimal";
+    if (v.startsWith("moderate")) return "moderate";
+    if (v.startsWith("marked")) return "marked";
+    return null;
   }
 
   // Generic grid drawer (FHR & TOCO)
@@ -575,12 +489,26 @@
     applyAccelerations(baseline, allowAccels);
 
     // Reset quiz fields
-    document.getElementById("baselineField").value = "";
-    document.getElementById("variabilityField").value = "";
-    document.getElementById("rangeField").value = "";
+    const baselineFieldEl = document.getElementById("baselineField");
+    if (baselineFieldEl) baselineFieldEl.value = "";
+
+    const lowEl = document.getElementById("rangeLowField");
+    const highEl = document.getElementById("rangeHighField");
+    if (lowEl) lowEl.value = "";
+    if (highEl) highEl.value = "";
+
     document.getElementById("baselineCorrect").hidden = true;
-    document.getElementById("variabilityCorrect").hidden = true;
     document.getElementById("rangeCorrect").hidden = true;
+
+    const varCorrectEl = document.getElementById("variabilityCorrect");
+    if (varCorrectEl) varCorrectEl.hidden = true;
+
+    document.querySelectorAll('input[name="variabilityChoice"]').forEach(r => {
+      r.checked = false;
+    });
+    document.querySelectorAll('.var-label').forEach(lbl => {
+      lbl.style.fontWeight = "normal";
+    });
 
     // Always show TOCO, with at most 1 contraction
     generateTocoStrip();
@@ -685,8 +613,18 @@
           renderFHRStrip();
         } else if (target === "variability") {
           const el = document.getElementById("variabilityCorrect");
-          el.textContent = correctVariability;
-          el.hidden = false;
+          if (el) {
+            el.textContent = correctVariability;
+            el.hidden = false;
+          }
+          const type = getVariabilityCategory();
+          document.querySelectorAll('.var-label').forEach(lbl => {
+            lbl.style.fontWeight = "normal";
+          });
+          if (type) {
+            const lbl = document.getElementById("var-" + type + "-label");
+            if (lbl) lbl.style.fontWeight = "bold";
+          }
         } else if (target === "range") {
           const el = document.getElementById("rangeCorrect");
           el.textContent = correctRange;
