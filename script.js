@@ -136,7 +136,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(239,68,68,1)";
-    ctx.font = "12px Arial";          // bigger grid numbers
+    ctx.font = "16px Arial";          // bigger grid numbers
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
