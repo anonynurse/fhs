@@ -1,43 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Fetal Heart Surveillance Practice</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-<div class="layout">
-  <div class="strip-card">
-    <div class="strip-title">Fetal Heart Rate Strip (simulated)</div>
-    <canvas id="fhrCanvas" width="900" height="350"></canvas>
-    <canvas id="tocoCanvas" width="900" height="150"></canvas>
-  </div>
-
-  <div class="side-panel">
-    <div class="top-controls">
-      <button id="newStripBtn" class="btn">New</button>
-    </div>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:4px 0 8px;">
-
-    <div style="display:flex; gap:8px;">
-      <button id="addAccelBtn" class="btn" style="align-self:flex-start;">
-        Add accel marker
-      </button>
-      <button id="checkAccelBtn" class="btn" style="align-self:flex-start;">
-        Check accels
-      </button>
-    </div>
-
     <!-- Baseline -->
     <div class="field-row">
       <div class="field-group">
         <label for="baselineField">Baseline FHR (bpm)</label>
-        <input id="baselineField" type="text" autocomplete="off" class="small-input">
+        <div class="input-with-check">
+          <input id="baselineField" type="text" autocomplete="off" class="small-input">
+          <button class="btn check-btn inline-check" data-target="baseline">Check</button>
+        </div>
         <div id="baselineCorrect" class="correct-label" hidden></div>
       </div>
-      <button class="btn check-btn" data-target="baseline">Check</button>
     </div>
 
     <!-- Variability (radio buttons) -->
@@ -75,12 +45,8 @@
           <input id="rangeLowField" type="text" autocomplete="off" placeholder="130" class="small-input">
           <span>–</span>
           <input id="rangeHighField" type="text" autocomplete="off" placeholder="150" class="small-input">
+          <button class="btn check-btn inline-check" data-target="range">Check</button>
         </div>
         <div id="rangeCorrect" class="correct-label" hidden></div>
       </div>
-      <button class="btn check-btn" data-target="range">Check</button>
     </div>
-  </div>
-</div>
-</body>
-</html>
