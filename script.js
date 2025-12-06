@@ -31,6 +31,14 @@
     return Math.random() * (max - min) + min;
   }
 
+  // Convert a desired CSS pixel font size into canvas units,
+  // compensating for canvas scaling on mobile.
+  function getFontSize(ctx, targetCssPx) {
+    const rect = ctx.canvas.getBoundingClientRect();
+    const scale = rect.width ? ctx.canvas.width / rect.width : 1;
+    return targetCssPx * scale;
+  }
+
   // Weighted fetal variability, amplitude is ± from baseline (peak–trough = 2*amplitude)
   function pickVariability() {
     const r = Math.random();
@@ -136,7 +144,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(239,68,68,1)";
-    ctx.font = "16px Arial";          // bigger grid numbers
+    ctx.font = getFontSize(ctx, 16) + "px Arial"; // ~16px on screen
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -168,7 +176,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = "18px Arial";           // bigger baseline label
+    ctx.font = getFontSize(ctx, 18) + "px Arial"; // ~18px on screen
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(correctBaseline + " bpm", 4, baselineY - 2);
@@ -193,7 +201,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = "18px Arial";           // bigger "accel" label
+    ctx.font = getFontSize(ctx, 18) + "px Arial"; // ~18px on screen
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
 
@@ -213,7 +221,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(220,38,38,0.98)";
-    ctx.font = "18px Arial";          // bigger truth labels
+    ctx.font = getFontSize(ctx, 18) + "px Arial"; // ~18px on screen
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
 
