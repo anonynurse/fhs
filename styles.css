@@ -92,7 +92,7 @@ canvas {
 
 /* smaller numeric/text inputs (baseline + range) */
 .small-input {
-  width: 4ch; /* enough for 3 digits and a bit of padding */
+  width: 5ch; /* a bit wider now */
 }
 
 .correct-label {
@@ -122,7 +122,7 @@ canvas {
 .radio-group {
   display: flex;
   flex-wrap: nowrap; /* try to keep on one line */
-  gap: 4px 8px;      /* tighter gap so they fit */
+  gap: 4px 8px;
   margin-top: 4px;
 }
 
@@ -131,7 +131,7 @@ canvas {
 }
 
 .var-label {
-  font-size: 0.75rem; /* slightly smaller so all 4 fit in one row */
+  font-size: 0.75rem; /* slightly smaller so all 4 fit easier */
   color: #111827;
   display: flex;
   align-items: center;
@@ -150,15 +150,32 @@ canvas {
   color: #4b5563;
 }
 
-/* Mobile: side panel below, graphs full width */
+/* Default: variability check button still on same row on desktop */
+.variability-check-btn {
+  align-self: center;
+}
+
+/* Mobile: side panel below, graphs full width, and variability check under radios */
 @media (max-width: 900px) {
   .layout {
     flex-direction: column;
     height: auto;
   }
+
   .strip-card,
   .side-panel {
     width: 100%;
+  }
+
+  /* Put the variability "Check" button on a new line under the radios */
+  .field-row.variability-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-row.variability-row .variability-check-btn {
+    align-self: flex-start;
+    margin-top: 4px;
   }
 
   .radio-group {
