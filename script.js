@@ -526,34 +526,30 @@
     ctx.restore();
   }
 
-  function setupCheckButtons() {
-    document.querySelectorAll(".check-btn").forEach(btn => {
-      btn.addEventListener("click", function () {
-        const target = this.dataset.target;
-        if (target === "baseline") {
-          const el = document.getElementById("baselineCorrect");
-          el.textContent = correctBaseline + " bpm";
-          el.hidden = false;
-          showBaselineOverlay = true;
-          renderFHRStrip();
-        } else if (target === "variability") {
-          const el = document.getElementById("variabilityCorrect");
-          if (el) {
-            el.textContent = correctVariability;
-            el.hidden = false;
-          }
-        } else if (target === "range") {
-          const el = document.getElementById("rangeCorrect");
-          el.textContent = correctRange;
-          el.hidden = false;
-        }
-      });
-    });
-  }
-
   function setupTopControls() {
     document.getElementById("newStripBtn")
       .addEventListener("click", generateFHRStrip);
+
+    const checkAllBtn = document.getElementById("checkAllBtn");
+    checkAllBtn.addEventListener("click", function () {
+      // Show all answers at once
+      const baselineEl = document.getElementById("baselineCorrect");
+      baselineEl.textContent = correctBaseline + " bpm";
+      baselineEl.hidden = false;
+
+      const varEl = document.getElementById("variabilityCorrect");
+      if (varEl) {
+        varEl.textContent = correctVariability;
+        varEl.hidden = false;
+      }
+
+      const rangeEl = document.getElementById("rangeCorrect");
+      rangeEl.textContent = correctRange;
+      rangeEl.hidden = false;
+
+      showBaselineOverlay = true;
+      renderFHRStrip();
+    });
   }
 
   function setupAccelControls() {
@@ -671,7 +667,6 @@
 
   window.addEventListener("DOMContentLoaded", function () {
     generateFHRStrip();
-    setupCheckButtons();
     setupTopControls();
     setupAccelControls();
     setupCanvasDrag();
