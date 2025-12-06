@@ -189,7 +189,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen, slightly shrunk on mobile
+    ctx.font = getFontSize(ctx, 15) + "px Arial";
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(correctBaseline + " bpm", 4, baselineY - 2);
