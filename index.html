@@ -5,8 +5,8 @@
   <title>Fetal Heart Surveillance Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- bump v= if you want to force cache refresh -->
-  <link rel="stylesheet" href="styles.css?v=1">
-  <script src="script.js?v=1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=2">
+  <script src="script.js?v=2" defer></script>
 </head>
 <body>
 <div class="layout">
@@ -19,6 +19,7 @@
   <div class="side-panel">
     <div class="top-controls">
       <button id="newStripBtn" class="btn">New</button>
+      <button id="checkAllBtn" class="btn btn-secondary">Check</button>
     </div>
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:4px 0 8px;">
 
@@ -35,10 +36,7 @@
     <div class="field-row">
       <div class="field-group">
         <label for="baselineField">Baseline FHR (bpm)</label>
-        <div class="input-with-check">
-          <input id="baselineField" type="text" autocomplete="off" class="small-input">
-          <button class="btn check-btn inline-check" data-target="baseline">Check</button>
-        </div>
+        <input id="baselineField" type="text" autocomplete="off" class="small-input">
         <div id="baselineCorrect" class="correct-label" hidden></div>
       </div>
     </div>
@@ -67,7 +65,6 @@
         </div>
         <div id="variabilityCorrect" class="correct-label" hidden></div>
       </div>
-      <button class="btn check-btn variability-check-btn" data-target="variability">Check</button>
     </div>
 
     <!-- Range: two inputs with hyphen -->
@@ -78,7 +75,6 @@
           <input id="rangeLowField" type="text" autocomplete="off" placeholder="130" class="small-input">
           <span>–</span>
           <input id="rangeHighField" type="text" autocomplete="off" placeholder="150" class="small-input">
-          <button class="btn check-btn inline-check" data-target="range">Check</button>
         </div>
         <div id="rangeCorrect" class="correct-label" hidden></div>
       </div>
