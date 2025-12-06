@@ -32,11 +32,18 @@
   }
 
   // Convert a desired CSS pixel font size into canvas units,
-  // compensating for canvas scaling on mobile.
+  // compensating for canvas scaling (and shrink a bit on narrow/mobile).
   function getFontSize(ctx, targetCssPx) {
     const rect = ctx.canvas.getBoundingClientRect();
     const scale = rect.width ? ctx.canvas.width / rect.width : 1;
-    return targetCssPx * scale;
+
+    // Slightly shrink labels on narrow screens (mobile-ish)
+    let factor = 1;
+    if (rect.width < 700) {
+      factor = 0.85; // 15% smaller on mobile
+    }
+
+    return targetCssPx * factor * scale;
   }
 
   // Weighted fetal variability, amplitude is ± from baseline (peak–trough = 2*amplitude)
@@ -182,7 +189,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen
+    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen, slightly shrunk on mobile
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(correctBaseline + " bpm", 4, baselineY - 2);
@@ -207,7 +214,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen
+    ctx.font = getFontSize(ctx, 15) + "px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
 
@@ -227,7 +234,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(220,38,38,0.98)";
-    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen
+    ctx.font = getFontSize(ctx, 15) + "px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
 
@@ -250,7 +257,7 @@
     const height = canvas.height;
 
     ctx.clearRect(0, 0, width, height);
-    // FHR grid with scaled labels (~14px on screen)
+    // FHR grid with scaled labels (~14px on desktop, ~12px-ish on mobile)
     drawGrid(ctx, width, height, BPM_MIN_GRID, BPM_MAX_GRID,
              10, 30, 30, 14, true);
 
