@@ -168,7 +168,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = "13px Arial";           // bigger baseline label
+    ctx.font = "18px Arial";           // bigger baseline label
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(correctBaseline + " bpm", 4, baselineY - 2);
@@ -193,7 +193,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = "13px Arial";           // bigger "accel" label
+    ctx.font = "18px Arial";           // bigger "accel" label
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
 
@@ -213,7 +213,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(220,38,38,0.98)";
-    ctx.font = "13px Arial";          // bigger truth labels
+    ctx.font = "18px Arial";          // bigger truth labels
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
 
