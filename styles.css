@@ -60,7 +60,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
@@ -115,32 +115,12 @@ canvas {
   background: #1d4ed8;
 }
 
-.check-btn {
-  padding: 6px 10px;
+.btn-secondary {
+  background: #4b5563;
 }
 
-/* Inline baseline input + check button */
-.input-with-check {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Range inputs + inline check */
-.range-inputs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.inline-check {
-  padding-inline: 8px; /* a bit tighter so it sits nicely beside inputs */
-}
-
-.range-inputs span {
-  font-size: 0.9rem;
-  color: #4b5563;
+.btn-secondary:hover {
+  background: #374151;
 }
 
 .radio-group {
@@ -168,9 +148,17 @@ canvas {
   align-items: flex-start;
 }
 
-.variability-check-btn {
-  align-self: flex-start;
+/* Range inputs layout */
+.range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: 4px;
+}
+
+.range-inputs span {
+  font-size: 0.9rem;
+  color: #4b5563;
 }
 
 /* Mobile: side panel below, graphs full width */
