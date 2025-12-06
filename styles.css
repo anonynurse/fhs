@@ -90,9 +90,9 @@ canvas {
   font-size: 0.85rem;
 }
 
-/* smaller numeric/text inputs (baseline + range) */
+/* wider numeric/text inputs (baseline + range) */
 .small-input {
-  width: 5ch; /* a bit wider now */
+  width: 10ch; /* enough for up to ~10 characters */
 }
 
 .correct-label {
@@ -119,6 +119,30 @@ canvas {
   padding: 6px 10px;
 }
 
+/* Inline baseline input + check button */
+.input-with-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Range inputs + inline check */
+.range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.inline-check {
+  padding-inline: 8px; /* a bit tighter so it sits nicely beside inputs */
+}
+
+.range-inputs span {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
 .radio-group {
   display: flex;
   flex-wrap: nowrap; /* try to keep on one line */
@@ -138,19 +162,7 @@ canvas {
   cursor: pointer;
 }
 
-.range-inputs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.range-inputs span {
-  font-size: 0.9rem;
-  color: #4b5563;
-}
-
-/* Default: variability check button still on same row on desktop */
+/* Default: variability check button inline on desktop */
 .variability-check-btn {
   align-self: center;
 }
