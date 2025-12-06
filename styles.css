@@ -66,7 +66,7 @@ canvas {
 
 .field-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center; /* align inputs + Check buttons */
   gap: 8px;
 }
 
@@ -88,6 +88,11 @@ canvas {
   border: 1px solid #d1d5db;
   background: #f9fafb;
   font-size: 0.85rem;
+}
+
+/* smaller numeric/text inputs (baseline + range) */
+.small-input {
+  width: 4ch; /* enough for 3 digits and a bit of padding */
 }
 
 .correct-label {
@@ -112,22 +117,21 @@ canvas {
 
 .check-btn {
   padding: 6px 10px;
-  margin-top: 18px;
 }
 
 .radio-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+  flex-wrap: nowrap; /* try to keep on one line */
+  gap: 4px 8px;      /* tighter gap so they fit */
   margin-top: 4px;
 }
 
 .radio-group input[type="radio"] {
-  margin-right: 4px;
+  margin-right: 3px;
 }
 
 .var-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem; /* slightly smaller so all 4 fit in one row */
   color: #111827;
   display: flex;
   align-items: center;
@@ -155,5 +159,9 @@ canvas {
   .strip-card,
   .side-panel {
     width: 100%;
+  }
+
+  .radio-group {
+    gap: 4px; /* keep it tight on mobile */
   }
 }
