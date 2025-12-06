@@ -47,7 +47,7 @@
       // Absent
       return {
         name: "Absent",
-        amplitude: 0.5,        // P–T ≈ 1
+        amplitude: 0.5,
         step: 0.2
       };
     } else if (r < 0.45) {
@@ -78,8 +78,11 @@
   }
 
   // Generic grid drawer (FHR & TOCO)
+  // labelFontCssPx: desired on-screen px
+  // useScaling: true = scale for mobile; false = use raw px in canvas units
   function drawGrid(ctx, width, height, valueMin, valueMax,
-                    minorStep, majorStep, labelStep) {
+                    minorStep, majorStep, labelStep,
+                    labelFontCssPx, useScaling) {
 
     const smallBoxWidth = width / totalSmallBoxes;
     const minuteWidth = smallBoxWidth * smallBoxesPerMinute;
@@ -144,7 +147,10 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(239,68,68,1)";
-    ctx.font = getFontSize(ctx, 14) + "px Arial"; // ~16px on screen
+    const fontPx = useScaling
+      ? getFontSize(ctx, labelFontCssPx)
+      : labelFontCssPx;
+    ctx.font = fontPx + "px Arial";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -176,7 +182,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = getFontSize(ctx, 18) + "px Arial"; // ~18px on screen
+    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(correctBaseline + " bpm", 4, baselineY - 2);
@@ -201,7 +207,7 @@
 
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(37,99,235,0.95)";
-    ctx.font = getFontSize(ctx, 18) + "px Arial"; // ~18px on screen
+    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
 
@@ -221,7 +227,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(220,38,38,0.98)";
-    ctx.font = getFontSize(ctx, 18) + "px Arial"; // ~18px on screen
+    ctx.font = getFontSize(ctx, 15) + "px Arial"; // ~15px on screen
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
 
@@ -244,8 +250,9 @@
     const height = canvas.height;
 
     ctx.clearRect(0, 0, width, height);
+    // FHR grid with scaled labels (~14px on screen)
     drawGrid(ctx, width, height, BPM_MIN_GRID, BPM_MAX_GRID,
-             10, 30, 30);
+             10, 30, 30, 14, true);
 
     if (!fhrTrace || fhrTrace.length === 0) return;
 
@@ -437,8 +444,9 @@
     const maxVal = 100;
 
     ctx.clearRect(0, 0, width, height);
+    // TOCO grid with smaller fixed labels (no scaling)
     drawGrid(ctx, width, height, minVal, maxVal,
-             10, 20, 20);
+             10, 20, 20, 10, false);
 
     const valueSpan = maxVal - minVal;
     const pixelsPerVal = height / valueSpan;
