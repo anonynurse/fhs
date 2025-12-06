@@ -144,7 +144,7 @@
 
     ctx.save();
     ctx.fillStyle = "rgba(239,68,68,1)";
-    ctx.font = getFontSize(ctx, 16) + "px Arial"; // ~16px on screen
+    ctx.font = getFontSize(ctx, 14) + "px Arial"; // ~16px on screen
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
